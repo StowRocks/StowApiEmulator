@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test": "jest",
-    "prepare": "lefthook install",
+    "postinstall": "test \"$VERCEL\" != \"1\" && lefthook install || true",
     "lint": "eslint . --ext .ts,.tsx,.js",
     "format": "prettier --write ."
   },
