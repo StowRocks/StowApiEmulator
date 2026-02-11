@@ -78,14 +78,20 @@ export const resolvers = {
   },
 
   Mutation: {
-    sceneUpdate: async (_: any, { input }: any) => {
+    sceneUpdate: async (
+      _: unknown,
+      { input }: { input: { id: string; rating100?: number; organized?: boolean } }
+    ) => {
       const { id, rating100, organized } = input;
       await updateSceneData(id, { rating100, organized });
       const data = await getSceneData(id);
       return { id, ...data };
     },
 
-    performerUpdate: async (_: any, { input }: any) => {
+    performerUpdate: async (
+      _: unknown,
+      { input }: { input: { id: string; favorite?: boolean } }
+    ) => {
       const { id, favorite } = input;
       await updatePerformerData(id, { favorite });
       const data = await getPerformerData(id);
@@ -94,11 +100,11 @@ export const resolvers = {
   },
 
   Scene: {
-    rating100: async (scene: any) => {
+    rating100: async (scene: { id: string }) => {
       const data = await getSceneData(scene.id);
       return data.rating100 ?? null;
     },
-    organized: async (scene: any) => {
+    organized: async (scene: { id: string }) => {
       const data = await getSceneData(scene.id);
       return data.organized ?? false;
     },
