@@ -31,3 +31,4 @@ yarn-error.log*
 
 # Kiro steering documents
 .kiro/
+.vercel

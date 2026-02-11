@@ -30,7 +30,12 @@ export const resolvers = {
       );
 
       const scenes = results.flat();
-      return { count: scenes.length, scenes };
+      return {
+        count: scenes.length,
+        duration: 0,
+        filesize: 0,
+        scenes,
+      };
     },
 
     findPerformers: async () => {

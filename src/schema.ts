@@ -12,6 +12,8 @@ export const typeDefs = `#graphql
 
   type FindScenesResultType {
     count: Int!
+    duration: Float!
+    filesize: Float!
     scenes: [Scene!]!
   }
 
