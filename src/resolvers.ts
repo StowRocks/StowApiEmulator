@@ -23,7 +23,8 @@ export const resolvers = {
               performers,
               movies: [movie],
             }));
-          } catch {
+          } catch (error) {
+            console.error(`Error fetching scenes for TMDB ID ${id}:`, error);
             return [];
           }
         })
