@@ -15,8 +15,10 @@ const memoryCache = new Map<string, any>();
 const hasPostgres = !!process.env.DATABASE_URL;
 const sql = hasPostgres ? neon(process.env.DATABASE_URL!) : null;
 
+let dbInitialized = false;
+
 async function initDb() {
-  if (!sql) return;
+  if (!sql || dbInitialized) return;
 
   try {
     await sql`
@@ -35,16 +37,16 @@ async function initDb() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    dbInitialized = true;
   } catch (error) {
     console.error('Failed to initialize database:', error);
   }
 }
 
-// Initialize on module load
-initDb();
-
 export async function getSceneData(id: string): Promise<SceneData> {
   if (sql) {
+    await initDb();
     try {
       const result = await sql`SELECT rating100, organized FROM scene_data WHERE id = ${id}`;
       return result[0] || {};
@@ -57,6 +59,7 @@ export async function getSceneData(id: string): Promise<SceneData> {
 
 export async function updateSceneData(id: string, data: SceneData): Promise<void> {
   if (sql) {
+    await initDb();
     try {
       await sql`
         INSERT INTO scene_data (id, rating100, organized)
@@ -77,6 +80,7 @@ export async function updateSceneData(id: string, data: SceneData): Promise<void
 
 export async function getPerformerData(id: string): Promise<PerformerData> {
   if (sql) {
+    await initDb();
     try {
       const result = await sql`SELECT favorite FROM performer_data WHERE id = ${id}`;
       return result[0] || {};
@@ -89,6 +93,7 @@ export async function getPerformerData(id: string): Promise<PerformerData> {
 
 export async function updatePerformerData(id: string, data: PerformerData): Promise<void> {
   if (sql) {
+    await initDb();
     try {
       await sql`
         INSERT INTO performer_data (id, favorite)
