@@ -1,14 +1,42 @@
 export const typeDefs = `#graphql
+  scalar Time
+
+  enum GenderEnum {
+    MALE
+    FEMALE
+    TRANSGENDER_MALE
+    TRANSGENDER_FEMALE
+    INTERSEX
+    NON_BINARY
+  }
+
+  enum CriterionModifier {
+    EQUALS
+    NOT_EQUALS
+    GREATER_THAN
+    LESS_THAN
+    IS_NULL
+    NOT_NULL
+    INCLUDES
+    EXCLUDES
+    MATCHES_REGEX
+    NOT_MATCHES_REGEX
+  }
+
   type Query {
     systemStatus: SystemStatus!
-    findScenes(filter: FindFilterType, scene_filter: SceneFilterType): FindScenesResultType!
-    findPerformers(filter: FindFilterType, performer_filter: PerformerFilterType): FindPerformersResultType!
-    findStudios(filter: FindFilterType, studio_filter: StudioFilterType): FindStudiosResultType!
-    findTags(filter: FindFilterType, tag_filter: TagFilterType): FindTagsResultType!
-    findGalleries(filter: FindFilterType, gallery_filter: GalleryFilterType): FindGalleriesResultType!
-    findGroups(filter: FindFilterType): FindGroupsResultType!
-    findImages(filter: FindFilterType, image_filter: ImageFilterType): FindImagesResultType!
-    findSceneMarkers(filter: FindFilterType): FindSceneMarkersResultType!
+    findScene(id: ID!): Scene
+    findScenes(filter: FindFilterType, scene_filter: SceneFilterType, ids: [ID!]): FindScenesResultType!
+    findPerformer(id: ID!): Performer
+    findPerformers(filter: FindFilterType, performer_filter: PerformerFilterType, ids: [ID!]): FindPerformersResultType!
+    findStudio(id: ID!): Studio
+    findStudios(filter: FindFilterType, studio_filter: StudioFilterType, ids: [ID!]): FindStudiosResultType!
+    findTag(id: ID!): Tag
+    findTags(filter: FindFilterType, tag_filter: TagFilterType, ids: [ID!]): FindTagsResultType!
+    findGalleries(filter: FindFilterType, gallery_filter: GalleryFilterType, ids: [ID!]): FindGalleriesResultType!
+    findGroups(filter: FindFilterType, ids: [ID!]): FindGroupsResultType!
+    findImages(filter: FindFilterType, image_filter: ImageFilterType, ids: [ID!]): FindImagesResultType!
+    findSceneMarkers(filter: FindFilterType, scene_marker_filter: SceneMarkerFilterType, ids: [ID!]): FindSceneMarkersResultType!
   }
 
   type SystemStatus {
@@ -57,20 +85,24 @@ export const typeDefs = `#graphql
     galleries: MultiCriterionInput
   }
 
+  input SceneMarkerFilterType {
+    scene_id: ID
+  }
+
   input MultiCriterionInput {
     value: [ID!]
-    modifier: String
+    modifier: CriterionModifier
   }
 
   input HierarchicalMultiCriterionInput {
     value: [ID!]
-    modifier: String
+    modifier: CriterionModifier
     depth: Int
   }
 
   input StringCriterionInput {
-    value: String
-    modifier: String
+    value: String!
+    modifier: CriterionModifier
   }
 
   input SceneUpdateInput {
@@ -134,21 +166,23 @@ export const typeDefs = `#graphql
     code: String
     details: String
     director: String
-    urls: [String]
+    urls: [String!]!
     date: String
     rating100: Int
-    organized: Boolean
+    organized: Boolean!
     o_counter: Int
     resume_time: Float
     play_duration: Float
     play_count: Int
-    paths: ScenePaths
-    files: [VideoFile]
-    performers: [Performer]
-    tags: [Tag]
+    paths: ScenePaths!
+    files: [VideoFile!]!
+    performers: [Performer!]!
+    tags: [Tag!]!
     studio: Studio
-    galleries: [Gallery]
-    scene_markers: [SceneMarker]
+    galleries: [Gallery!]!
+    scene_markers: [SceneMarker!]!
+    created_at: Time
+    updated_at: Time
   }
 
   type ScenePaths {
@@ -170,22 +204,24 @@ export const typeDefs = `#graphql
 
   type SceneMarker {
     id: ID!
-    title: String
-    seconds: Float
-    screenshot: String
-    preview: String
-    stream: String
-    primary_tag: Tag
-    tags: [Tag]
-    scene: Scene
+    title: String!
+    seconds: Float!
+    screenshot: String!
+    preview: String!
+    stream: String!
+    primary_tag: Tag!
+    tags: [Tag!]!
+    scene: Scene!
+    created_at: Time
+    updated_at: Time
   }
 
   type Performer {
     id: ID!
-    name: String
+    name: String!
     disambiguation: String
-    urls: [String]
-    gender: String
+    urls: [String!]!
+    gender: GenderEnum
     twitter: String
     instagram: String
     birthdate: String
@@ -200,89 +236,93 @@ export const typeDefs = `#graphql
     career_length: String
     tattoos: String
     piercings: String
-    alias_list: [String]
-    favorite: Boolean
-    ignore_auto_tag: Boolean
+    alias_list: [String!]!
+    favorite: Boolean!
+    ignore_auto_tag: Boolean!
     image_path: String
-    scene_count: Int
-    image_count: Int
-    gallery_count: Int
-    group_count: Int
-    performer_count: Int
+    scene_count(depth: Int): Int!
+    image_count(depth: Int): Int!
+    gallery_count(depth: Int): Int!
+    group_count(depth: Int): Int!
+    performer_count(depth: Int): Int!
     o_counter: Int
     rating100: Int
     details: String
     death_date: String
     hair_color: String
     weight: Int
-    created_at: String
-    updated_at: String
+    created_at: Time
+    updated_at: Time
   }
 
   type Studio {
     id: ID!
-    name: String
+    name: String!
     url: String
+    urls: [String!]!
     parent_studio: Studio
-    child_studios: [Studio]
+    child_studios: [Studio!]!
     image_path: String
-    scene_count: Int
+    scene_count(depth: Int): Int!
     rating100: Int
     details: String
-    aliases: [String]
+    aliases: [String!]!
+    favorite: Boolean!
+    created_at: Time
+    updated_at: Time
   }
 
   type Tag {
     id: ID!
-    name: String
+    name: String!
     description: String
     sort_name: String
-    favorite: Boolean
-    aliases: [String]
-    ignore_auto_tag: Boolean
-    scene_count: Int
-    performer_count: Int
-    scene_marker_count: Int
+    favorite: Boolean!
+    aliases: [String!]!
+    ignore_auto_tag: Boolean!
+    scene_count(depth: Int): Int!
+    performer_count(depth: Int): Int!
+    scene_marker_count(depth: Int): Int!
     image_path: String
-    image_count: Int
-    gallery_count: Int
-    parent_count: Int
-    child_count: Int
-    created_at: String
-    updated_at: String
-    parents: [Tag]
-    children: [Tag]
+    image_count(depth: Int): Int!
+    gallery_count(depth: Int): Int!
+    parent_count: Int!
+    child_count: Int!
+    created_at: Time
+    updated_at: Time
+    parents: [Tag!]!
+    children: [Tag!]!
   }
 
   type Gallery {
     id: ID!
     title: String
     date: String
-    image_count: Int
+    image_count: Int!
     cover: StashImage
   }
 
   type Group {
     id: ID!
-    name: String
-    aliases: [String]
+    name: String!
+    aliases: [String!]!
     duration: Int
     date: String
     rating100: Int
     director: String
     synopsis: String
-    urls: [String]
-    scene_count: Int
+    urls: [String!]!
+    scene_count: Int!
     front_image_path: String
     back_image_path: String
     studio: Studio
-    tags: [Tag]
+    tags: [Tag!]!
   }
 
   type StashImage {
     id: ID!
     title: String
-    paths: ImagePaths
+    paths: ImagePaths!
   }
 
   type ImagePaths {

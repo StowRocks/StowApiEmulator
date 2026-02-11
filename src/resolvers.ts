@@ -7,8 +7,117 @@ import {
   getPerformerData,
   updatePerformerData,
 } from './persistence';
+import { GraphQLScalarType, Kind } from 'graphql';
+
+// Time scalar for ISO 8601 timestamps
+const TimeScalar = new GraphQLScalarType({
+  name: 'Time',
+  description: 'ISO 8601 timestamp',
+  serialize(value: unknown) {
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'string') return value;
+    return null;
+  },
+  parseValue(value: unknown) {
+    if (typeof value === 'string') return new Date(value);
+    return null;
+  },
+  parseLiteral(ast) {
+    if (ast.kind === Kind.STRING) return new Date(ast.value);
+    return null;
+  },
+});
+
+async function getAllScenes() {
+  const { allowedTmdbIds } = getConfig();
+  const results = await Promise.all(
+    allowedTmdbIds.map(async (id) => {
+      try {
+        const [videos, credits, details] = await Promise.all([
+          fetchVideos(id),
+          fetchCredits(id),
+          fetchShowDetails(id),
+        ]);
+        const performers = credits.map(mapCastToPerformer);
+        const studio = mapShowToStudio(details);
+        const tags = details.genres?.map(mapGenreToTag) || [];
+        return videos.map((v) => ({
+          ...mapVideoToScene(v, id),
+          performers,
+          studio,
+          tags,
+        }));
+      } catch {
+        return [];
+      }
+    })
+  );
+  return results.flat();
+}
+
+async function getAllPerformers() {
+  const { allowedTmdbIds } = getConfig();
+  const results = await Promise.all(
+    allowedTmdbIds.map(async (id) => {
+      try {
+        const credits = await fetchCredits(id);
+        return credits.map(mapCastToPerformer);
+      } catch {
+        return [];
+      }
+    })
+  );
+  const seen = new Set<string>();
+  return results.flat().filter((p) => {
+    if (seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
+}
+
+async function getAllStudios() {
+  const { allowedTmdbIds } = getConfig();
+  const results = await Promise.all(
+    allowedTmdbIds.map(async (id) => {
+      try {
+        const details = await fetchShowDetails(id);
+        return mapShowToStudio(details);
+      } catch {
+        return null;
+      }
+    })
+  );
+  const seen = new Set<string>();
+  return results.filter((s): s is NonNullable<typeof s> => {
+    if (!s || seen.has(s.id)) return false;
+    seen.add(s.id);
+    return true;
+  });
+}
+
+async function getAllTags() {
+  const { allowedTmdbIds } = getConfig();
+  const results = await Promise.all(
+    allowedTmdbIds.map(async (id) => {
+      try {
+        const details = await fetchShowDetails(id);
+        return details.genres?.map(mapGenreToTag) || [];
+      } catch {
+        return [];
+      }
+    })
+  );
+  const seen = new Set<string>();
+  return results.flat().filter((t) => {
+    if (seen.has(t.id)) return false;
+    seen.add(t.id);
+    return true;
+  });
+}
 
 export const resolvers = {
+  Time: TimeScalar,
+
   Query: {
     systemStatus: () => ({
       databasePath: '/emulator/tmdb',
@@ -16,247 +125,210 @@ export const resolvers = {
       appSchema: 1,
     }),
 
+    findScene: async (_: unknown, args: { id: string }) => {
+      const scenes = await getAllScenes();
+      return scenes.find((s) => s.id === args.id) || null;
+    },
+
     findScenes: async (
       _: unknown,
       args: {
         filter?: { q?: string; page?: number; per_page?: number };
         scene_filter?: {
-          performers?: { value?: string[] };
-          tags?: { value?: string[] };
-          studios?: { value?: string[] };
+          performers?: { value?: string[]; modifier?: string };
+          tags?: { value?: string[]; modifier?: string };
+          studios?: { value?: string[]; modifier?: string };
         };
+        ids?: string[];
       }
     ) => {
-      const { allowedTmdbIds } = getConfig();
+      let scenes = await getAllScenes();
       const page = args.filter?.page || 1;
       const perPage = args.filter?.per_page || 20;
       const query = args.filter?.q?.toLowerCase();
 
-      const results = await Promise.all(
-        allowedTmdbIds.map(async (id) => {
-          try {
-            const [videos, credits, details] = await Promise.all([
-              fetchVideos(id),
-              fetchCredits(id),
-              fetchShowDetails(id),
-            ]);
-            const performers = credits.map(mapCastToPerformer);
-            const studio = mapShowToStudio(details);
-            const tags = details.genres?.map(mapGenreToTag) || [];
-            return videos.map((v) => ({
-              ...mapVideoToScene(v, id),
-              performers,
-              studio,
-              tags,
-            }));
-          } catch (error) {
-            console.error(`Error fetching scenes for TMDB ID ${id}:`, error);
-            return [];
-          }
-        })
-      );
+      if (args.ids?.length) {
+        const idSet = new Set(args.ids);
+        scenes = scenes.filter((s) => idSet.has(s.id));
+      }
 
-      let scenes = results.flat();
-
-      // Text search
       if (query) {
         scenes = scenes.filter(
-          (scene) =>
-            scene.title?.toLowerCase().includes(query) ||
-            scene.details?.toLowerCase().includes(query) ||
-            scene.performers?.some((p: { name?: string | null }) =>
+          (s) =>
+            s.title?.toLowerCase().includes(query) ||
+            s.details?.toLowerCase().includes(query) ||
+            s.performers?.some((p: { name?: string | null }) =>
               p.name?.toLowerCase().includes(query)
             )
         );
       }
 
-      // Filter by performers
       if (args.scene_filter?.performers?.value?.length) {
-        const performerIds = new Set(args.scene_filter.performers.value);
-        scenes = scenes.filter((scene) =>
-          scene.performers?.some((p: { id: string }) => performerIds.has(p.id))
-        );
+        const ids = new Set(args.scene_filter.performers.value);
+        const mod = args.scene_filter.performers.modifier || 'INCLUDES';
+        scenes = scenes.filter((s) => {
+          const has = s.performers?.some((p: { id: string }) => ids.has(p.id));
+          return mod === 'EXCLUDES' ? !has : has;
+        });
       }
 
-      // Filter by tags
       if (args.scene_filter?.tags?.value?.length) {
-        const tagIds = new Set(args.scene_filter.tags.value);
-        scenes = scenes.filter((scene) =>
-          scene.tags?.some((t: { id: string }) => tagIds.has(t.id))
-        );
+        const ids = new Set(args.scene_filter.tags.value);
+        const mod = args.scene_filter.tags.modifier || 'INCLUDES';
+        scenes = scenes.filter((s) => {
+          const has = s.tags?.some((t: { id: string }) => ids.has(t.id));
+          return mod === 'EXCLUDES' ? !has : has;
+        });
       }
 
-      // Filter by studios
       if (args.scene_filter?.studios?.value?.length) {
-        const studioIds = new Set(args.scene_filter.studios.value);
-        scenes = scenes.filter((scene) => scene.studio && studioIds.has(scene.studio.id));
+        const ids = new Set(args.scene_filter.studios.value);
+        const mod = args.scene_filter.studios.modifier || 'INCLUDES';
+        scenes = scenes.filter((s) => {
+          const has = s.studio && ids.has(s.studio.id);
+          return mod === 'EXCLUDES' ? !has : has;
+        });
       }
 
       const start = (page - 1) * perPage;
-      const end = start + perPage;
-      const paginated = scenes.slice(start, end);
+      const paginated = scenes.slice(start, start + perPage);
 
-      return {
-        count: scenes.length,
-        duration: 0,
-        filesize: 0,
-        scenes: paginated,
-      };
+      return { count: scenes.length, duration: 0, filesize: 0, scenes: paginated };
+    },
+
+    findPerformer: async (_: unknown, args: { id: string }) => {
+      const performers = await getAllPerformers();
+      return performers.find((p) => p.id === args.id) || null;
     },
 
     findPerformers: async (
       _: unknown,
       args: {
         filter?: { q?: string; page?: number; per_page?: number };
-        performer_filter?: { name?: { value?: string }; favorite?: boolean };
+        performer_filter?: { name?: { value?: string; modifier?: string }; favorite?: boolean };
+        ids?: string[];
       }
     ) => {
-      const { allowedTmdbIds } = getConfig();
+      let performers = await getAllPerformers();
       const page = args.filter?.page || 1;
       const perPage = args.filter?.per_page || 20;
       const query =
         args.filter?.q?.toLowerCase() || args.performer_filter?.name?.value?.toLowerCase();
 
-      const results = await Promise.all(
-        allowedTmdbIds.map(async (id) => {
-          try {
-            const credits = await fetchCredits(id);
-            return credits.map(mapCastToPerformer);
-          } catch {
-            return [];
-          }
-        })
-      );
-
-      const seen = new Set<string>();
-      let performers = results.flat().filter((p) => {
-        if (seen.has(p.id)) return false;
-        seen.add(p.id);
-        return true;
-      });
-
-      // Text search
-      if (query) {
-        performers = performers.filter((p) => p.name?.toLowerCase().includes(query));
+      if (args.ids?.length) {
+        const idSet = new Set(args.ids);
+        performers = performers.filter((p) => idSet.has(p.id));
       }
 
-      // Filter by favorite
+      if (query) {
+        const mod = args.performer_filter?.name?.modifier || 'INCLUDES';
+        performers = performers.filter((p) => {
+          const matches = p.name?.toLowerCase().includes(query);
+          if (mod === 'MATCHES_REGEX') {
+            try {
+              return new RegExp(query, 'i').test(p.name || '');
+            } catch {
+              return matches;
+            }
+          }
+          return mod === 'EXCLUDES' ? !matches : matches;
+        });
+      }
+
       if (args.performer_filter?.favorite !== undefined) {
-        const favoriteFilter = args.performer_filter.favorite;
+        const fav = args.performer_filter.favorite;
         const filtered = [];
         for (const p of performers) {
           const data = await getPerformerData(p.id);
-          if ((data.favorite ?? false) === favoriteFilter) {
-            filtered.push(p);
-          }
+          if ((data.favorite ?? false) === fav) filtered.push(p);
         }
         performers = filtered;
       }
 
       const start = (page - 1) * perPage;
-      const end = start + perPage;
-      const paginated = performers.slice(start, end);
+      const paginated = performers.slice(start, start + perPage);
 
       return { count: performers.length, performers: paginated };
+    },
+
+    findStudio: async (_: unknown, args: { id: string }) => {
+      const studios = await getAllStudios();
+      return studios.find((s) => s.id === args.id) || null;
     },
 
     findStudios: async (
       _: unknown,
       args: {
         filter?: { q?: string; page?: number; per_page?: number };
-        studio_filter?: { name?: { value?: string } };
+        studio_filter?: { name?: { value?: string; modifier?: string } };
+        ids?: string[];
       }
     ) => {
-      const { allowedTmdbIds } = getConfig();
+      let studios = await getAllStudios();
       const page = args.filter?.page || 1;
       const perPage = args.filter?.per_page || 20;
       const query = args.filter?.q?.toLowerCase() || args.studio_filter?.name?.value?.toLowerCase();
 
-      const results = await Promise.all(
-        allowedTmdbIds.map(async (id) => {
-          try {
-            const details = await fetchShowDetails(id);
-            return mapShowToStudio(details);
-          } catch {
-            return null;
-          }
-        })
-      );
-
-      const seen = new Set<string>();
-      let studios = results.filter((s): s is NonNullable<typeof s> => {
-        if (!s || seen.has(s.id)) return false;
-        seen.add(s.id);
-        return true;
-      });
+      if (args.ids?.length) {
+        const idSet = new Set(args.ids);
+        studios = studios.filter((s) => idSet.has(s.id));
+      }
 
       if (query) {
-        studios = studios.filter((s) => s.name?.toLowerCase().includes(query));
+        const mod = args.studio_filter?.name?.modifier || 'INCLUDES';
+        studios = studios.filter((s) => {
+          const matches = s.name?.toLowerCase().includes(query);
+          return mod === 'EXCLUDES' ? !matches : matches;
+        });
       }
 
       const start = (page - 1) * perPage;
-      const end = start + perPage;
-      const paginated = studios.slice(start, end);
+      const paginated = studios.slice(start, start + perPage);
 
       return { count: studios.length, studios: paginated };
+    },
+
+    findTag: async (_: unknown, args: { id: string }) => {
+      const tags = await getAllTags();
+      return tags.find((t) => t.id === args.id) || null;
     },
 
     findTags: async (
       _: unknown,
       args: {
         filter?: { q?: string; page?: number; per_page?: number };
-        tag_filter?: { name?: { value?: string } };
+        tag_filter?: { name?: { value?: string; modifier?: string } };
+        ids?: string[];
       }
     ) => {
-      const { allowedTmdbIds } = getConfig();
+      let tags = await getAllTags();
       const page = args.filter?.page || 1;
       const perPage = args.filter?.per_page || 40;
       const query = args.filter?.q?.toLowerCase() || args.tag_filter?.name?.value?.toLowerCase();
 
-      const results = await Promise.all(
-        allowedTmdbIds.map(async (id) => {
-          try {
-            const details = await fetchShowDetails(id);
-            return details.genres?.map(mapGenreToTag) || [];
-          } catch {
-            return [];
-          }
-        })
-      );
-
-      const seen = new Set<string>();
-      let tags = results.flat().filter((t) => {
-        if (seen.has(t.id)) return false;
-        seen.add(t.id);
-        return true;
-      });
+      if (args.ids?.length) {
+        const idSet = new Set(args.ids);
+        tags = tags.filter((t) => idSet.has(t.id));
+      }
 
       if (query) {
-        tags = tags.filter((t) => t.name?.toLowerCase().includes(query));
+        const mod = args.tag_filter?.name?.modifier || 'INCLUDES';
+        tags = tags.filter((t) => {
+          const matches = t.name?.toLowerCase().includes(query);
+          return mod === 'EXCLUDES' ? !matches : matches;
+        });
       }
 
       const start = (page - 1) * perPage;
-      const end = start + perPage;
-      const paginated = tags.slice(start, end);
+      const paginated = tags.slice(start, start + perPage);
 
       return { count: tags.length, tags: paginated };
     },
 
-    findGalleries: async () => {
-      return { count: 0, galleries: [] };
-    },
-
-    findGroups: async () => {
-      return { count: 0, groups: [] };
-    },
-
-    findImages: async () => {
-      return { count: 0, images: [] };
-    },
-
-    findSceneMarkers: async () => {
-      return { count: 0, scene_markers: [] };
-    },
+    findGalleries: () => ({ count: 0, galleries: [] }),
+    findGroups: () => ({ count: 0, groups: [] }),
+    findImages: () => ({ count: 0, images: [] }),
+    findSceneMarkers: () => ({ count: 0, scene_markers: [] }),
   },
 
   Mutation: {
@@ -266,46 +338,96 @@ export const resolvers = {
         input,
       }: { input: { id: string; rating100?: number; organized?: boolean; o_counter?: number } }
     ) => {
-      const { id, rating100, organized, o_counter } = input;
-      await updateSceneData(id, { rating100, organized, o_counter });
-      const data = await getSceneData(id);
-      return { id, ...data };
+      await updateSceneData(input.id, {
+        rating100: input.rating100,
+        organized: input.organized,
+        o_counter: input.o_counter,
+      });
+      return { id: input.id };
     },
 
     performerUpdate: async (
       _: unknown,
       { input }: { input: { id: string; favorite?: boolean; rating100?: number } }
     ) => {
-      const { id, favorite, rating100 } = input;
-      await updatePerformerData(id, { favorite, rating100 });
-      const data = await getPerformerData(id);
-      return { id, ...data };
+      await updatePerformerData(input.id, { favorite: input.favorite, rating100: input.rating100 });
+      return { id: input.id };
     },
   },
 
   Scene: {
-    rating100: async (scene: { id: string }) => {
-      const data = await getSceneData(scene.id);
-      return data.rating100 ?? null;
-    },
-    organized: async (scene: { id: string }) => {
-      const data = await getSceneData(scene.id);
-      return data.organized ?? false;
-    },
-    o_counter: async (scene: { id: string }) => {
-      const data = await getSceneData(scene.id);
-      return data.o_counter ?? 0;
-    },
+    urls: (p: { urls?: string[] }) => p.urls || [],
+    organized: async (p: { id: string }) => (await getSceneData(p.id)).organized ?? false,
+    paths: (p: { paths?: unknown }) => p.paths || {},
+    files: (p: { files?: unknown[] }) => p.files || [],
+    performers: (p: { performers?: unknown[] }) => p.performers || [],
+    tags: (p: { tags?: unknown[] }) => p.tags || [],
+    galleries: () => [],
+    scene_markers: () => [],
+    rating100: async (p: { id: string }) => (await getSceneData(p.id)).rating100 ?? null,
+    o_counter: async (p: { id: string }) => (await getSceneData(p.id)).o_counter ?? 0,
+    created_at: () => null,
+    updated_at: () => null,
   },
 
   Performer: {
-    favorite: async (performer: { id: string }) => {
-      const data = await getPerformerData(performer.id);
-      return data.favorite ?? false;
-    },
-    rating100: async (performer: { id: string }) => {
-      const data = await getPerformerData(performer.id);
-      return data.rating100 ?? null;
-    },
+    name: (p: { name?: string | null }) => p.name || '',
+    urls: (p: { urls?: string[] }) => p.urls || [],
+    alias_list: (p: { alias_list?: string[] }) => p.alias_list || [],
+    favorite: async (p: { id: string }) => (await getPerformerData(p.id)).favorite ?? false,
+    ignore_auto_tag: () => false,
+    scene_count: () => 0,
+    image_count: () => 0,
+    gallery_count: () => 0,
+    group_count: () => 0,
+    performer_count: () => 0,
+    rating100: async (p: { id: string }) => (await getPerformerData(p.id)).rating100 ?? null,
+    created_at: () => null,
+    updated_at: () => null,
+  },
+
+  Studio: {
+    name: (p: { name?: string | null }) => p.name || '',
+    urls: () => [],
+    child_studios: () => [],
+    aliases: (p: { aliases?: string[] }) => p.aliases || [],
+    favorite: () => false,
+    scene_count: () => 0,
+    created_at: () => null,
+    updated_at: () => null,
+  },
+
+  Tag: {
+    name: (p: { name?: string | null }) => p.name || '',
+    favorite: () => false,
+    aliases: (p: { aliases?: string[] }) => p.aliases || [],
+    ignore_auto_tag: () => false,
+    scene_count: () => 0,
+    performer_count: () => 0,
+    scene_marker_count: () => 0,
+    image_count: () => 0,
+    gallery_count: () => 0,
+    parent_count: () => 0,
+    child_count: () => 0,
+    parents: () => [],
+    children: () => [],
+    created_at: () => null,
+    updated_at: () => null,
+  },
+
+  Gallery: {
+    image_count: () => 0,
+  },
+
+  Group: {
+    name: (p: { name?: string | null }) => p.name || '',
+    aliases: (p: { aliases?: string[] }) => p.aliases || [],
+    urls: (p: { urls?: string[] }) => p.urls || [],
+    tags: () => [],
+    scene_count: () => 0,
+  },
+
+  StashImage: {
+    paths: (p: { paths?: unknown }) => p.paths || {},
   },
 };
