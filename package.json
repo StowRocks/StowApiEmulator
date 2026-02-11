@@ -1,0 +1,38 @@
+{
+  "name": "stow-api-simulator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "jest",
+    "prepare": "lefthook install",
+    "lint": "eslint . --ext .ts,.tsx,.js",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@apollo/server": "^4.11.3",
+    "@as-integrations/next": "^3.1.0",
+    "axios": "^1.7.9",
+    "graphql": "^16.10.0",
+    "next": "^14.2.21",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.17.12",
+    "@types/react": "^18.3.18",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.21",
+    "fast-check": "^3.23.2",
+    "jest": "^29.7.0",
+    "lefthook": "^1.6.1",
+    "prettier": "^3.2.5",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.3"
+  }
+}
