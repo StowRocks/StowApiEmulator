@@ -26,6 +26,12 @@ export function mapVideoToScene(video: TMDBVideo, showId: number): Scene {
     },
     performers: [],
     movies: [],
+    stash_ids: [
+      {
+        endpoint: 'https://theporndb.net/graphql',
+        stash_id: `tmdb-scene-${showId}-${video.id}`,
+      },
+    ],
   };
 }
 
@@ -35,6 +41,12 @@ export function mapCastToPerformer(cast: TMDBCastMember): Performer {
     name: cast.name,
     image_path: cast.profile_path ? `${TMDB_IMAGE_BASE}${cast.profile_path}` : null,
     galleries: [],
+    stash_ids: [
+      {
+        endpoint: 'https://theporndb.net/graphql',
+        stash_id: `tmdb-person-${cast.id}`,
+      },
+    ],
   };
 }
 
@@ -59,8 +71,9 @@ export function mapShowToMovie(show: TMDBShowDetails): Movie {
 
 export function mapShowToStudio(show: TMDBShowDetails): Studio {
   const network = show.networks?.[0];
+  const studioId = network ? String(network.id) : String(show.id);
   return {
-    id: network ? String(network.id) : String(show.id),
+    id: studioId,
     name: network?.name || show.name || show.title || null,
     url: show.homepage || null,
     parent_studio: null,
@@ -70,6 +83,12 @@ export function mapShowToStudio(show: TMDBShowDetails): Studio {
     rating100: null,
     details: show.overview || null,
     aliases: [],
+    stash_ids: [
+      {
+        endpoint: 'https://theporndb.net/graphql',
+        stash_id: `tmdb-network-${studioId}`,
+      },
+    ],
   };
 }
 
@@ -86,6 +105,12 @@ export function mapGenreToTag(genre: TMDBGenre): Tag {
     performer_count: 0,
     scene_marker_count: 0,
     image_path: null,
+    stash_ids: [
+      {
+        endpoint: 'https://theporndb.net/graphql',
+        stash_id: `tmdb-genre-${genre.id}`,
+      },
+    ],
     image_count: 0,
     gallery_count: 0,
     parent_count: 0,

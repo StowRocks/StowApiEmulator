@@ -46,6 +46,11 @@ export interface TMDBShowDetails {
 
 // Stash Schema Types (output, served via GraphQL)
 
+export interface StashID {
+  endpoint: string;
+  stash_id: string;
+}
+
 export interface ScenePaths {
   screenshot: string | null;
 }
@@ -59,6 +64,7 @@ export interface Scene {
   paths: ScenePaths;
   performers: Performer[];
   movies: Movie[];
+  stash_ids?: StashID[];
 }
 
 export interface Performer {
@@ -66,6 +72,7 @@ export interface Performer {
   name: string | null;
   image_path: string | null;
   galleries: Gallery[];
+  stash_ids?: StashID[];
 }
 
 export interface Gallery {
@@ -96,6 +103,7 @@ export interface Studio {
   rating100: number | null;
   details: string | null;
   aliases: string[];
+  stash_ids?: StashID[];
 }
 
 export interface Tag {
@@ -118,4 +126,5 @@ export interface Tag {
   updated_at: string | null;
   parents: Tag[];
   children: Tag[];
+  stash_ids?: StashID[];
 }
