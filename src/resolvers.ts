@@ -1,6 +1,12 @@
 import { getConfig } from './config';
 import { fetchVideos, fetchCredits, fetchShowDetails, fetchImages } from './tmdb-service';
 import { mapVideoToScene, mapCastToPerformer, mapImagesToGallery, mapShowToMovie } from './mappers';
+import {
+  getSceneData,
+  updateSceneData,
+  getPerformerData,
+  updatePerformerData,
+} from './persistence';
 import type { Performer, Movie } from './types';
 
 export const resolvers = {
@@ -64,7 +70,38 @@ export const resolvers = {
     },
   },
 
+  Mutation: {
+    sceneUpdate: async (_: any, { input }: any) => {
+      const { id, rating100, organized } = input;
+      await updateSceneData(id, { rating100, organized });
+      const data = await getSceneData(id);
+      return { id, ...data };
+    },
+
+    performerUpdate: async (_: any, { input }: any) => {
+      const { id, favorite } = input;
+      await updatePerformerData(id, { favorite });
+      const data = await getPerformerData(id);
+      return { id, ...data };
+    },
+  },
+
+  Scene: {
+    rating100: async (scene: any) => {
+      const data = await getSceneData(scene.id);
+      return data.rating100 ?? null;
+    },
+    organized: async (scene: any) => {
+      const data = await getSceneData(scene.id);
+      return data.organized ?? false;
+    },
+  },
+
   Performer: {
+    favorite: async (performer: Performer) => {
+      const data = await getPerformerData(performer.id);
+      return data.favorite ?? false;
+    },
     galleries: async (performer: Performer) => {
       try {
         const personId = Number(performer.id);

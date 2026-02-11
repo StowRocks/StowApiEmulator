@@ -4,10 +4,26 @@ export const typeDefs = `#graphql
     findPerformers(filter: FindFilterType): FindPerformersResultType!
   }
 
+  type Mutation {
+    sceneUpdate(input: SceneUpdateInput!): Scene
+    performerUpdate(input: PerformerUpdateInput!): Performer
+  }
+
   input FindFilterType {
     q: String
     page: Int
     per_page: Int
+  }
+
+  input SceneUpdateInput {
+    id: ID!
+    rating100: Int
+    organized: Boolean
+  }
+
+  input PerformerUpdateInput {
+    id: ID!
+    favorite: Boolean
   }
 
   type FindScenesResultType {
@@ -31,6 +47,8 @@ export const typeDefs = `#graphql
     paths: ScenePaths
     performers: [Performer]
     movies: [Movie]
+    rating100: Int
+    organized: Boolean
   }
 
   type ScenePaths {
@@ -42,6 +60,7 @@ export const typeDefs = `#graphql
     name: String
     image_path: String
     galleries: [Gallery]
+    favorite: Boolean
   }
 
   type Gallery {
