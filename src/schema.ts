@@ -1,5 +1,6 @@
 export const typeDefs = `#graphql
   scalar Time
+  scalar Map
 
   enum GenderEnum {
     MALE
@@ -8,6 +9,11 @@ export const typeDefs = `#graphql
     TRANSGENDER_FEMALE
     INTERSEX
     NON_BINARY
+  }
+
+  enum CircumisedEnum {
+    CUT
+    UNCUT
   }
 
   enum CriterionModifier {
@@ -171,18 +177,47 @@ export const typeDefs = `#graphql
     rating100: Int
     organized: Boolean!
     o_counter: Int
+    interactive: Boolean!
+    interactive_speed: Int
     resume_time: Float
     play_duration: Float
     play_count: Int
+    last_played_at: Time
+    play_history: [Time!]!
+    o_history: [Time!]!
     paths: ScenePaths!
     files: [VideoFile!]!
     performers: [Performer!]!
     tags: [Tag!]!
     studio: Studio
     galleries: [Gallery!]!
+    groups: [SceneGroup!]!
+    movies: [SceneMovie!]!
     scene_markers: [SceneMarker!]!
+    stash_ids: [StashID!]!
+    captions: [VideoCaption!]
     created_at: Time
     updated_at: Time
+  }
+
+  type SceneGroup {
+    group: Group!
+    scene_index: Int
+  }
+
+  type SceneMovie {
+    movie: Movie!
+    scene_index: Int
+  }
+
+  type VideoCaption {
+    language_code: String!
+    caption_type: String!
+  }
+
+  type StashID {
+    endpoint: String!
+    stash_id: String!
   }
 
   type ScenePaths {
@@ -232,7 +267,7 @@ export const typeDefs = `#graphql
     measurements: String
     fake_tits: String
     penis_length: Float
-    circumcised: String
+    circumcised: CircumisedEnum
     career_length: String
     tattoos: String
     piercings: String
@@ -253,6 +288,9 @@ export const typeDefs = `#graphql
     weight: Int
     created_at: Time
     updated_at: Time
+    tags: [Tag!]!
+    stash_ids: [StashID!]!
+    custom_fields: Map!
   }
 
   type Studio {
@@ -264,12 +302,21 @@ export const typeDefs = `#graphql
     child_studios: [Studio!]!
     image_path: String
     scene_count(depth: Int): Int!
+    image_count(depth: Int): Int!
+    gallery_count(depth: Int): Int!
+    performer_count(depth: Int): Int!
+    group_count(depth: Int): Int!
     rating100: Int
     details: String
     aliases: [String!]!
+    tags: [Tag!]!
     favorite: Boolean!
+    ignore_auto_tag: Boolean!
+    stash_ids: [StashID!]!
+    o_counter: Int
     created_at: Time
     updated_at: Time
+    custom_fields: Map!
   }
 
   type Tag {
@@ -281,17 +328,20 @@ export const typeDefs = `#graphql
     aliases: [String!]!
     ignore_auto_tag: Boolean!
     scene_count(depth: Int): Int!
-    performer_count(depth: Int): Int!
     scene_marker_count(depth: Int): Int!
-    image_path: String
     image_count(depth: Int): Int!
     gallery_count(depth: Int): Int!
+    performer_count(depth: Int): Int!
+    studio_count(depth: Int): Int!
+    group_count(depth: Int): Int!
     parent_count: Int!
     child_count: Int!
+    image_path: String
     created_at: Time
     updated_at: Time
     parents: [Tag!]!
     children: [Tag!]!
+    custom_fields: Map!
   }
 
   type Gallery {
@@ -317,6 +367,21 @@ export const typeDefs = `#graphql
     back_image_path: String
     studio: Studio
     tags: [Tag!]!
+  }
+
+  type Movie {
+    id: ID!
+    name: String!
+    aliases: [String!]!
+    duration: Int
+    date: String
+    rating100: Int
+    director: String
+    synopsis: String
+    url: String
+    front_image_path: String
+    back_image_path: String
+    studio: Studio
   }
 
   type StashImage {

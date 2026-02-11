@@ -9,7 +9,6 @@ import {
 } from './persistence';
 import { GraphQLScalarType, Kind } from 'graphql';
 
-// Time scalar for ISO 8601 timestamps
 const TimeScalar = new GraphQLScalarType({
   name: 'Time',
   description: 'ISO 8601 timestamp',
@@ -26,6 +25,14 @@ const TimeScalar = new GraphQLScalarType({
     if (ast.kind === Kind.STRING) return new Date(ast.value);
     return null;
   },
+});
+
+const MapScalar = new GraphQLScalarType({
+  name: 'Map',
+  description: 'String -> Any map',
+  serialize: (value) => value || {},
+  parseValue: (value) => value || {},
+  parseLiteral: () => ({}),
 });
 
 async function getAllScenes() {
@@ -117,6 +124,7 @@ async function getAllTags() {
 
 export const resolvers = {
   Time: TimeScalar,
+  Map: MapScalar,
 
   Query: {
     systemStatus: () => ({
@@ -358,12 +366,21 @@ export const resolvers = {
   Scene: {
     urls: (p: { urls?: string[] }) => p.urls || [],
     organized: async (p: { id: string }) => (await getSceneData(p.id)).organized ?? false,
+    interactive: () => false,
+    interactive_speed: () => null,
+    last_played_at: () => null,
+    play_history: () => [],
+    o_history: () => [],
     paths: (p: { paths?: unknown }) => p.paths || {},
     files: (p: { files?: unknown[] }) => p.files || [],
     performers: (p: { performers?: unknown[] }) => p.performers || [],
     tags: (p: { tags?: unknown[] }) => p.tags || [],
     galleries: () => [],
+    groups: () => [],
+    movies: () => [],
     scene_markers: () => [],
+    stash_ids: () => [],
+    captions: () => [],
     rating100: async (p: { id: string }) => (await getSceneData(p.id)).rating100 ?? null,
     o_counter: async (p: { id: string }) => (await getSceneData(p.id)).o_counter ?? 0,
     created_at: () => null,
@@ -381,6 +398,9 @@ export const resolvers = {
     gallery_count: () => 0,
     group_count: () => 0,
     performer_count: () => 0,
+    tags: () => [],
+    stash_ids: () => [],
+    custom_fields: () => ({}),
     rating100: async (p: { id: string }) => (await getPerformerData(p.id)).rating100 ?? null,
     created_at: () => null,
     updated_at: () => null,
@@ -390,6 +410,14 @@ export const resolvers = {
     name: (p: { name?: string | null }) => p.name || '',
     urls: () => [],
     child_studios: () => [],
+    image_count: () => 0,
+    gallery_count: () => 0,
+    performer_count: () => 0,
+    group_count: () => 0,
+    tags: () => [],
+    ignore_auto_tag: () => false,
+    stash_ids: () => [],
+    custom_fields: () => ({}),
     aliases: (p: { aliases?: string[] }) => p.aliases || [],
     favorite: () => false,
     scene_count: () => 0,
@@ -407,10 +435,13 @@ export const resolvers = {
     scene_marker_count: () => 0,
     image_count: () => 0,
     gallery_count: () => 0,
+    studio_count: () => 0,
+    group_count: () => 0,
     parent_count: () => 0,
     child_count: () => 0,
     parents: () => [],
     children: () => [],
+    custom_fields: () => ({}),
     created_at: () => null,
     updated_at: () => null,
   },
