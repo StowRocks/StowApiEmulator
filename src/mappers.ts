@@ -3,10 +3,13 @@ import type {
   TMDBCastMember,
   TMDBImage,
   TMDBShowDetails,
+  TMDBGenre,
   Scene,
   Performer,
   Gallery,
   Movie,
+  Studio,
+  Tag,
 } from './types';
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/original';
@@ -48,8 +51,48 @@ export function mapImagesToGallery(personId: number, images: TMDBImage[]): Galle
 export function mapShowToMovie(show: TMDBShowDetails): Movie {
   return {
     id: String(show.id),
-    name: show.name ?? show.title ?? null,
-    synopsis: show.overview,
+    name: show.name || show.title || null,
+    synopsis: show.overview || null,
     scenes: [],
+  };
+}
+
+export function mapShowToStudio(show: TMDBShowDetails): Studio {
+  const network = show.networks?.[0];
+  return {
+    id: network ? String(network.id) : String(show.id),
+    name: network?.name || show.name || show.title || null,
+    url: show.homepage || null,
+    parent_studio: null,
+    child_studios: [],
+    image_path: network?.logo_path ? `${TMDB_IMAGE_BASE}${network.logo_path}` : null,
+    scene_count: 0,
+    rating100: null,
+    details: show.overview || null,
+    aliases: [],
+  };
+}
+
+export function mapGenreToTag(genre: TMDBGenre): Tag {
+  return {
+    id: String(genre.id),
+    name: genre.name,
+    description: null,
+    sort_name: genre.name,
+    favorite: false,
+    aliases: [],
+    ignore_auto_tag: false,
+    scene_count: 0,
+    performer_count: 0,
+    scene_marker_count: 0,
+    image_path: null,
+    image_count: 0,
+    gallery_count: 0,
+    parent_count: 0,
+    child_count: 0,
+    created_at: null,
+    updated_at: null,
+    parents: [],
+    children: [],
   };
 }

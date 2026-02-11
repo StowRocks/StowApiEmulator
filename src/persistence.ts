@@ -3,10 +3,12 @@ import { neon } from '@neondatabase/serverless';
 interface SceneData {
   rating100?: number | null;
   organized?: boolean;
+  o_counter?: number;
 }
 
 interface PerformerData {
   favorite?: boolean;
+  rating100?: number | null;
 }
 
 // In-memory cache fallback
@@ -26,6 +28,7 @@ async function initDb() {
         id TEXT PRIMARY KEY,
         rating100 INTEGER,
         organized BOOLEAN DEFAULT FALSE,
+        o_counter INTEGER DEFAULT 0,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
@@ -34,6 +37,7 @@ async function initDb() {
       CREATE TABLE IF NOT EXISTS performer_data (
         id TEXT PRIMARY KEY,
         favorite BOOLEAN DEFAULT FALSE,
+        rating100 INTEGER,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
@@ -48,7 +52,8 @@ export async function getSceneData(id: string): Promise<SceneData> {
   if (sql) {
     await initDb();
     try {
-      const result = await sql`SELECT rating100, organized FROM scene_data WHERE id = ${id}`;
+      const result =
+        await sql`SELECT rating100, organized, o_counter FROM scene_data WHERE id = ${id}`;
       return result[0] || {};
     } catch {
       return {};
@@ -62,11 +67,12 @@ export async function updateSceneData(id: string, data: SceneData): Promise<void
     await initDb();
     try {
       await sql`
-        INSERT INTO scene_data (id, rating100, organized)
-        VALUES (${id}, ${data.rating100 ?? null}, ${data.organized ?? false})
+        INSERT INTO scene_data (id, rating100, organized, o_counter)
+        VALUES (${id}, ${data.rating100 ?? null}, ${data.organized ?? false}, ${data.o_counter ?? 0})
         ON CONFLICT (id) DO UPDATE SET
           rating100 = COALESCE(EXCLUDED.rating100, scene_data.rating100),
           organized = COALESCE(EXCLUDED.organized, scene_data.organized),
+          o_counter = COALESCE(EXCLUDED.o_counter, scene_data.o_counter),
           updated_at = CURRENT_TIMESTAMP
       `;
     } catch (error) {
@@ -82,7 +88,7 @@ export async function getPerformerData(id: string): Promise<PerformerData> {
   if (sql) {
     await initDb();
     try {
-      const result = await sql`SELECT favorite FROM performer_data WHERE id = ${id}`;
+      const result = await sql`SELECT favorite, rating100 FROM performer_data WHERE id = ${id}`;
       return result[0] || {};
     } catch {
       return {};
@@ -96,10 +102,11 @@ export async function updatePerformerData(id: string, data: PerformerData): Prom
     await initDb();
     try {
       await sql`
-        INSERT INTO performer_data (id, favorite)
-        VALUES (${id}, ${data.favorite ?? false})
+        INSERT INTO performer_data (id, favorite, rating100)
+        VALUES (${id}, ${data.favorite ?? false}, ${data.rating100 ?? null})
         ON CONFLICT (id) DO UPDATE SET
-          favorite = EXCLUDED.favorite,
+          favorite = COALESCE(EXCLUDED.favorite, performer_data.favorite),
+          rating100 = COALESCE(EXCLUDED.rating100, performer_data.rating100),
           updated_at = CURRENT_TIMESTAMP
       `;
     } catch (error) {
