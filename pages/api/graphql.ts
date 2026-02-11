@@ -1,8 +1,8 @@
 import { ApolloServer } from '@apollo/server';
 import { startServerAndCreateNextHandler } from '@as-integrations/next';
 import type { NextApiRequest } from 'next';
-import { typeDefs } from '../src/schema';
-import { resolvers } from '../src/resolvers';
+import { typeDefs } from '../../src/schema';
+import { resolvers } from '../../src/resolvers';
 
 const server = new ApolloServer({ typeDefs, resolvers });
 
