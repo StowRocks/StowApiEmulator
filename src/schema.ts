@@ -1,7 +1,14 @@
 export const typeDefs = `#graphql
   type Query {
+    systemStatus: SystemStatus!
     findScenes(filter: FindFilterType): FindScenesResultType!
     findPerformers(filter: FindFilterType): FindPerformersResultType!
+  }
+
+  type SystemStatus {
+    databasePath: String!
+    databaseSchema: Int
+    appSchema: Int
   }
 
   type Mutation {

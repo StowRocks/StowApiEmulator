@@ -11,6 +11,13 @@ import type { Performer, Movie } from './types';
 
 export const resolvers = {
   Query: {
+    systemStatus: () => ({
+      databasePath: '/emulator/tmdb',
+      databaseSchema: 1,
+      appSchema: 1,
+      status: 'OK',
+    }),
+
     findScenes: async () => {
       const { allowedTmdbIds } = getConfig();
 
