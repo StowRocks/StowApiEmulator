@@ -8,6 +8,7 @@ export const typeDefs = `#graphql
     findGalleries(filter: FindFilterType, gallery_filter: GalleryFilterType): FindGalleriesResultType!
     findGroups(filter: FindFilterType): FindGroupsResultType!
     findImages(filter: FindFilterType, image_filter: ImageFilterType): FindImagesResultType!
+    findSceneMarkers(filter: FindFilterType): FindSceneMarkersResultType!
   }
 
   type SystemStatus {
@@ -122,6 +123,11 @@ export const typeDefs = `#graphql
     images: [StashImage!]!
   }
 
+  type FindSceneMarkersResultType {
+    count: Int!
+    scene_markers: [SceneMarker!]!
+  }
+
   type Scene {
     id: ID!
     title: String
@@ -166,7 +172,12 @@ export const typeDefs = `#graphql
     id: ID!
     title: String
     seconds: Float
+    screenshot: String
+    preview: String
+    stream: String
     primary_tag: Tag
+    tags: [Tag]
+    scene: Scene
   }
 
   type Performer {

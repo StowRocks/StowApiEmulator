@@ -1,5 +1,5 @@
 import { getConfig } from './config';
-import { fetchVideos, fetchCredits, fetchShowDetails, fetchImages } from './tmdb-service';
+import { fetchVideos, fetchCredits, fetchShowDetails } from './tmdb-service';
 import { mapVideoToScene, mapCastToPerformer, mapShowToStudio, mapGenreToTag } from './mappers';
 import {
   getSceneData,
@@ -252,6 +252,10 @@ export const resolvers = {
 
     findImages: async () => {
       return { count: 0, images: [] };
+    },
+
+    findSceneMarkers: async () => {
+      return { count: 0, scene_markers: [] };
     },
   },
 
