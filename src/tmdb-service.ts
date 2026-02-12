@@ -8,7 +8,12 @@ const TTL = 86400; // 24 hours
 
 let redis: Redis | null = null;
 if (process.env.REDIS_URL) {
-  redis = new Redis(process.env.REDIS_URL, { lazyConnect: true });
+  redis = new Redis(process.env.REDIS_URL, {
+    lazyConnect: true,
+    maxRetriesPerRequest: 1,
+    enableReadyCheck: false,
+    connectTimeout: 1000,
+  });
 }
 
 export async function cachedFetch<T>(url: string): Promise<T> {
