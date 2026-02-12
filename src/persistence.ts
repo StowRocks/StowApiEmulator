@@ -42,14 +42,6 @@ async function initDb() {
       )
     `;
 
-    await sql`
-      CREATE TABLE IF NOT EXISTS tmdb_cache (
-        key TEXT PRIMARY KEY,
-        data JSONB NOT NULL,
-        expires_at TIMESTAMP NOT NULL
-      )
-    `;
-
     dbInitialized = true;
   } catch (error) {
     console.error('Failed to initialize database:', error);
@@ -123,48 +115,5 @@ export async function updatePerformerData(id: string, data: PerformerData): Prom
   } else {
     const existing = memoryCache.get(`performer:${id}`) || {};
     memoryCache.set(`performer:${id}`, { ...existing, ...data });
-  }
-}
-
-export async function getCachedData<T>(key: string): Promise<T | null> {
-  if (sql) {
-    await initDb();
-    try {
-      const result = await sql`
-        SELECT data FROM tmdb_cache 
-        WHERE key = ${key} AND expires_at > NOW()
-      `;
-      return result[0]?.data || null;
-    } catch {
-      return null;
-    }
-  }
-  const cached = memoryCache.get(`cache:${key}`);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.data;
-  }
-  return null;
-}
-
-export async function setCachedData(key: string, data: any, ttlHours = 24): Promise<void> {
-  if (sql) {
-    await initDb();
-    try {
-      const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
-      await sql`
-        INSERT INTO tmdb_cache (key, data, expires_at)
-        VALUES (${key}, ${JSON.stringify(data)}, ${expiresAt.toISOString()})
-        ON CONFLICT (key) DO UPDATE SET
-          data = EXCLUDED.data,
-          expires_at = EXCLUDED.expires_at
-      `;
-    } catch (error) {
-      console.error('Failed to cache data:', error);
-    }
-  } else {
-    memoryCache.set(`cache:${key}`, {
-      data,
-      expiresAt: Date.now() + ttlHours * 60 * 60 * 1000,
-    });
   }
 }

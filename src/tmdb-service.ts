@@ -1,20 +1,29 @@
 import axios from 'axios';
 import { getConfig } from './config';
-import { getCachedData, setCachedData } from './persistence';
 import type { TMDBCastMember, TMDBImage, TMDBShowDetails, TMDBVideo } from './types';
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
+const TTL_MS = 86_400_000; // 24 hours
+
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const cache = new Map<string, CacheEntry<unknown>>();
 
 export async function cachedFetch<T>(url: string): Promise<T> {
-  const cached = await getCachedData<T>(url);
-  if (cached) return cached;
+  const existing = cache.get(url);
+  if (existing && existing.expiresAt > Date.now()) {
+    return existing.data as T;
+  }
 
   const { tmdbApiToken } = getConfig();
   const response = await axios.get<T>(url, {
     headers: { Authorization: `Bearer ${tmdbApiToken}` },
   });
 
-  await setCachedData(url, response.data);
+  cache.set(url, { data: response.data, expiresAt: Date.now() + TTL_MS });
   return response.data;
 }
 
@@ -62,4 +71,9 @@ export async function fetchAllShows(ids: number[]): Promise<TMDBShowDetails[]> {
   );
 
   return results.filter((r): r is TMDBShowDetails => r !== null);
+}
+
+/** Clears the in-memory cache. Useful for testing. */
+export function clearCache(): void {
+  cache.clear();
 }
