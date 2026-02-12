@@ -1,21 +1,17 @@
 import axios from 'axios';
+import { kv } from '@vercel/kv';
 import { getConfig } from './config';
 import type { TMDBCastMember, TMDBImage, TMDBShowDetails, TMDBVideo } from './types';
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
-const TTL_MS = 86_400_000; // 24 hours
-
-interface CacheEntry<T> {
-  data: T;
-  expiresAt: number;
-}
-
-const cache = new Map<string, CacheEntry<unknown>>();
+const TTL = 86400; // 24 hours
 
 export async function cachedFetch<T>(url: string): Promise<T> {
-  const existing = cache.get(url);
-  if (existing && existing.expiresAt > Date.now()) {
-    return existing.data as T;
+  try {
+    const cached = await kv.get<T>(url);
+    if (cached) return cached;
+  } catch {
+    // Redis unavailable, continue without cache
   }
 
   const { tmdbApiToken } = getConfig();
@@ -23,7 +19,12 @@ export async function cachedFetch<T>(url: string): Promise<T> {
     headers: { Authorization: `Bearer ${tmdbApiToken}` },
   });
 
-  cache.set(url, { data: response.data, expiresAt: Date.now() + TTL_MS });
+  try {
+    await kv.set(url, response.data, { ex: TTL });
+  } catch {
+    // Redis unavailable, continue without caching
+  }
+
   return response.data;
 }
 
@@ -71,9 +72,4 @@ export async function fetchAllShows(ids: number[]): Promise<TMDBShowDetails[]> {
   );
 
   return results.filter((r): r is TMDBShowDetails => r !== null);
-}
-
-/** Clears the in-memory cache. Useful for testing. */
-export function clearCache(): void {
-  cache.clear();
 }
