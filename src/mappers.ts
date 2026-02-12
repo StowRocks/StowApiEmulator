@@ -10,11 +10,16 @@ import type {
   Movie,
   Studio,
   Tag,
+  Group,
 } from './types';
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/original';
 
-export function mapVideoToScene(video: TMDBVideo, showId: number): Scene {
+export function mapVideoToScene(
+  video: TMDBVideo,
+  showId: number,
+  showDetails?: TMDBShowDetails
+): Scene {
   return {
     id: `scene-${showId}-${video.id}`,
     title: video.name,
@@ -57,6 +62,26 @@ export function mapImagesToGallery(personId: number, images: TMDBImage[]): Galle
     files: images.map((img) => ({
       path: `${TMDB_IMAGE_BASE}${img.file_path}`,
     })),
+  };
+}
+
+export function mapShowToGroup(show: TMDBShowDetails): Group {
+  const network = show.networks?.[0];
+  return {
+    id: `group-${show.id}`,
+    name: show.name || show.title || 'Unknown',
+    aliases: [],
+    duration: null,
+    date: show.first_air_date || show.release_date || null,
+    rating100: null,
+    director: null,
+    synopsis: show.overview || null,
+    urls: show.homepage ? [show.homepage] : [],
+    scene_count: show.number_of_episodes || 0,
+    front_image_path: null,
+    back_image_path: null,
+    studio: network ? mapShowToStudio(show) : null,
+    tags: show.genres?.map(mapGenreToTag) || [],
   };
 }
 

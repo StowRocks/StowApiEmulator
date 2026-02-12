@@ -42,6 +42,8 @@ export interface TMDBShowDetails {
   homepage?: string;
   networks?: TMDBNetwork[];
   genres?: TMDBGenre[];
+  number_of_episodes?: number;
+  number_of_seasons?: number;
 }
 
 // Stash Schema Types (output, served via GraphQL)
@@ -127,4 +129,21 @@ export interface Tag {
   parents: Tag[];
   children: Tag[];
   stash_ids?: StashID[];
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  aliases: string[];
+  duration: number | null;
+  date: string | null;
+  rating100: number | null;
+  director: string | null;
+  synopsis: string | null;
+  urls: string[];
+  scene_count: number;
+  front_image_path: string | null;
+  back_image_path: string | null;
+  studio: Studio | null;
+  tags: Tag[];
 }

@@ -1,6 +1,12 @@
 import { getConfig } from './config';
 import { fetchVideos, fetchCredits, fetchShowDetails, fetchSeasonImages } from './tmdb-service';
-import { mapVideoToScene, mapCastToPerformer, mapShowToStudio, mapGenreToTag } from './mappers';
+import {
+  mapVideoToScene,
+  mapCastToPerformer,
+  mapShowToStudio,
+  mapGenreToTag,
+  mapShowToGroup,
+} from './mappers';
 import {
   getSceneData,
   updateSceneData,
@@ -369,7 +375,25 @@ export const resolvers = {
       return { count: filtered.length, galleries: filtered };
     },
 
-    findGroups: () => ({ count: 0, groups: [] }),
+    findGroups: async (_: unknown, args: { ids?: string[] }) => {
+      const { allowedTmdbIds } = getConfig();
+      const groups = await Promise.all(
+        allowedTmdbIds.map(async (id) => {
+          try {
+            const details = await fetchShowDetails(id);
+            return mapShowToGroup(details);
+          } catch {
+            return null;
+          }
+        })
+      );
+      const filtered = groups.filter((g): g is NonNullable<typeof g> => g !== null);
+      if (args.ids?.length) {
+        const idSet = new Set(args.ids);
+        return { count: filtered.length, groups: filtered.filter((g) => idSet.has(g.id)) };
+      }
+      return { count: filtered.length, groups: filtered };
+    },
 
     findImages: async (_: unknown, args: { ids?: string[] }) => {
       const { allowedTmdbIds } = getConfig();
