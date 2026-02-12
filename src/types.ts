@@ -16,6 +16,18 @@ export interface TMDBCastMember {
   character: string;
 }
 
+export interface TMDBPersonDetails {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  deathday: string | null;
+  place_of_birth: string | null;
+  profile_path: string | null;
+  known_for_department: string;
+  gender: number;
+}
+
 export interface TMDBImage {
   file_path: string;
   width: number;

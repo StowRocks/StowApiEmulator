@@ -1,5 +1,11 @@
 import { getConfig } from './config';
-import { fetchVideos, fetchCredits, fetchShowDetails, fetchSeasonImages } from './tmdb-service';
+import {
+  fetchVideos,
+  fetchCredits,
+  fetchShowDetails,
+  fetchSeasonImages,
+  fetchPersonDetails,
+} from './tmdb-service';
 import {
   mapVideoToScene,
   mapCastToPerformer,
@@ -75,7 +81,17 @@ async function getAllPerformers() {
     allowedTmdbIds.map(async (id) => {
       try {
         const credits = await fetchCredits(id);
-        return credits.map(mapCastToPerformer);
+        const performersWithDetails = await Promise.all(
+          credits.map(async (cast) => {
+            try {
+              const details = await fetchPersonDetails(cast.id);
+              return mapCastToPerformer(cast, details);
+            } catch {
+              return mapCastToPerformer(cast);
+            }
+          })
+        );
+        return performersWithDetails;
       } catch {
         return [];
       }

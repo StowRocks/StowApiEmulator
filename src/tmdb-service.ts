@@ -1,7 +1,13 @@
 import axios from 'axios';
 import Redis from 'ioredis';
 import { getConfig } from './config';
-import type { TMDBCastMember, TMDBImage, TMDBShowDetails, TMDBVideo } from './types';
+import type {
+  TMDBCastMember,
+  TMDBImage,
+  TMDBPersonDetails,
+  TMDBShowDetails,
+  TMDBVideo,
+} from './types';
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const TTL = 86400; // 24 hours
@@ -61,6 +67,10 @@ export async function fetchImages(personId: number): Promise<TMDBImage[]> {
     `${TMDB_BASE}/person/${personId}/images`
   );
   return data.profiles;
+}
+
+export async function fetchPersonDetails(personId: number): Promise<TMDBPersonDetails> {
+  return cachedFetch<TMDBPersonDetails>(`${TMDB_BASE}/person/${personId}`);
 }
 
 export async function fetchSeasonImages(showId: number, season: number): Promise<TMDBImage[]> {

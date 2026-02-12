@@ -1,6 +1,7 @@
 import type {
   TMDBVideo,
   TMDBCastMember,
+  TMDBPersonDetails,
   TMDBImage,
   TMDBShowDetails,
   TMDBGenre,
@@ -45,10 +46,16 @@ export function mapVideoToScene(
   };
 }
 
-export function mapCastToPerformer(cast: TMDBCastMember): Performer {
+export function mapCastToPerformer(cast: TMDBCastMember, details?: TMDBPersonDetails): Performer {
   return {
     id: String(cast.id),
     name: cast.name,
+    disambiguation: details?.known_for_department || null,
+    gender: details?.gender === 1 ? 'FEMALE' : details?.gender === 2 ? 'MALE' : null,
+    birthdate: details?.birthday || null,
+    death_date: details?.deathday || null,
+    country: details?.place_of_birth || null,
+    details: details?.biography || null,
     image_path: cast.profile_path ? `${TMDB_IMAGE_BASE}${cast.profile_path}` : null,
     galleries: [],
     stash_ids: [
