@@ -14,8 +14,8 @@ interface PerformerData {
 // In-memory cache fallback
 const memoryCache = new Map<string, any>();
 
-const hasPostgres = !!process.env.DATABASE_URL;
-const sql = hasPostgres ? neon(process.env.DATABASE_URL!) : null;
+const hasPostgres = !!process.env.POSTGRES_URL;
+const sql = hasPostgres ? neon(process.env.POSTGRES_URL!) : null;
 
 let dbInitialized = false;
 

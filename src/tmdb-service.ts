@@ -7,8 +7,8 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 const TTL = 86400; // 24 hours
 
 let redis: Redis | null = null;
-if (process.env.KV_URL) {
-  redis = new Redis(process.env.KV_URL, { lazyConnect: true });
+if (process.env.REDIS_URL) {
+  redis = new Redis(process.env.REDIS_URL, { lazyConnect: true });
 }
 
 export async function cachedFetch<T>(url: string): Promise<T> {
