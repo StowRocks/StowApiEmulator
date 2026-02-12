@@ -1,17 +1,24 @@
 import axios from 'axios';
-import { kv } from '@vercel/kv';
+import Redis from 'ioredis';
 import { getConfig } from './config';
 import type { TMDBCastMember, TMDBImage, TMDBShowDetails, TMDBVideo } from './types';
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const TTL = 86400; // 24 hours
 
+let redis: Redis | null = null;
+if (process.env.KV_URL) {
+  redis = new Redis(process.env.KV_URL, { lazyConnect: true });
+}
+
 export async function cachedFetch<T>(url: string): Promise<T> {
-  try {
-    const cached = await kv.get<T>(url);
-    if (cached) return cached;
-  } catch {
-    // Redis unavailable, continue without cache
+  if (redis) {
+    try {
+      const cached = await redis.get(url);
+      if (cached) return JSON.parse(cached);
+    } catch {
+      // Redis unavailable, continue without cache
+    }
   }
 
   const { tmdbApiToken } = getConfig();
@@ -19,10 +26,12 @@ export async function cachedFetch<T>(url: string): Promise<T> {
     headers: { Authorization: `Bearer ${tmdbApiToken}` },
   });
 
-  try {
-    await kv.set(url, response.data, { ex: TTL });
-  } catch {
-    // Redis unavailable, continue without caching
+  if (redis) {
+    try {
+      await redis.setex(url, TTL, JSON.stringify(response.data));
+    } catch {
+      // Redis unavailable, continue without caching
+    }
   }
 
   return response.data;
