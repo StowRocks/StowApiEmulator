@@ -14,6 +14,7 @@ import {
   updatePerformerData,
 } from './persistence';
 import { GraphQLScalarType, Kind } from 'graphql';
+import { getStreamUrl } from './invidious-service';
 
 const TimeScalar = new GraphQLScalarType({
   name: 'Time',
@@ -457,7 +458,25 @@ export const resolvers = {
     last_played_at: () => null,
     play_history: () => [],
     o_history: () => [],
-    paths: (p: { paths?: unknown }) => p.paths || {},
+    paths: async (p: { paths?: { screenshot?: string; preview?: string; stream?: string } }) => {
+      const basePaths = p.paths || {};
+
+      // Try to get direct stream URL from Invidious
+      if (basePaths.stream) {
+        const videoKey = basePaths.stream.match(/watch\?v=([^&]+)/)?.[1];
+        if (videoKey) {
+          const directUrl = await getStreamUrl(videoKey);
+          if (directUrl) {
+            return {
+              ...basePaths,
+              stream: directUrl, // Replace YouTube URL with direct stream
+            };
+          }
+        }
+      }
+
+      return basePaths; // Fallback to YouTube URL
+    },
     files: (p: { files?: unknown[] }) => p.files || [],
     performers: (p: { performers?: unknown[] }) => p.performers || [],
     tags: (p: { tags?: unknown[] }) => p.tags || [],
