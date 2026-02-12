@@ -1,27 +1,10 @@
-// Invidious public instances for YouTube stream extraction
-// Updated: 2026-02-12
-const INVIDIOUS_INSTANCES = [
-  'https://yewtu.be',
-  'https://inv.nadeko.net',
-  'https://invidious.nerdvpn.de',
-  'https://inv.riverside.rocks',
-  'https://invidious.snopyta.org',
-  'https://vid.puffyan.us',
-  'https://invidious.kavin.rocks',
-];
+import ytdl from '@distube/ytdl-core';
 
-interface InvidiousFormat {
+interface StreamFormat {
   url: string;
   quality: string;
-  type: string;
-  container: string;
-}
-
-interface InvidiousVideo {
-  videoId: string;
-  title: string;
-  formatStreams: InvidiousFormat[];
-  adaptiveFormats: InvidiousFormat[];
+  hasAudio: boolean;
+  hasVideo: boolean;
 }
 
 const cache = new Map<string, { url: string; expiresAt: number }>();
@@ -34,37 +17,30 @@ export async function getStreamUrl(videoKey: string): Promise<string | null> {
     return cached.url;
   }
 
-  // Try each Invidious instance
-  for (const instance of INVIDIOUS_INSTANCES) {
-    try {
-      const response = await fetch(`${instance}/api/v1/videos/${videoKey}`, {
-        signal: AbortSignal.timeout(3000), // 3s timeout
+  try {
+    const videoUrl = `https://www.youtube.com/watch?v=${videoKey}`;
+    const info = await ytdl.getInfo(videoUrl);
+
+    // Get formats with both audio and video (720p preferred)
+    const formats = ytdl.filterFormats(info.formats, 'videoandaudio');
+
+    // Prefer 720p, fallback to highest quality
+    const format =
+      formats.find((f) => f.qualityLabel === '720p') ||
+      formats.find((f) => f.qualityLabel === '1080p') ||
+      formats[0];
+
+    if (format?.url) {
+      // Cache the URL
+      cache.set(videoKey, {
+        url: format.url,
+        expiresAt: Date.now() + CACHE_TTL,
       });
-
-      if (!response.ok) continue;
-
-      const data = (await response.json()) as InvidiousVideo;
-
-      // Prefer 720p, fallback to highest quality
-      const format =
-        data.formatStreams.find((f) => f.quality === '720p') ||
-        data.formatStreams.find((f) => f.quality === '1080p') ||
-        data.formatStreams[0];
-
-      if (format?.url) {
-        // Cache the URL
-        cache.set(videoKey, {
-          url: format.url,
-          expiresAt: Date.now() + CACHE_TTL,
-        });
-        return format.url;
-      }
-    } catch (error) {
-      // Try next instance
-      continue;
+      return format.url;
     }
+  } catch (error) {
+    console.error(`ytdl-core failed for ${videoKey}:`, error);
   }
 
-  // All instances failed, return null (caller will use YouTube URL)
   return null;
 }
