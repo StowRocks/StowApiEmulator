@@ -55,7 +55,7 @@ async function getAllScenes() {
         const studio = mapShowToStudio(details);
         const tags = details.genres?.map(mapGenreToTag) || [];
         return videos.map((v) => ({
-          ...mapVideoToScene(v, id),
+          ...mapVideoToScene(v, id, details),
           performers,
           studio,
           tags,
@@ -465,12 +465,12 @@ export const resolvers = {
     groups: () => [],
     movies: () => [],
     scene_markers: () => [],
-    stash_ids: () => [],
+    stash_ids: (p: { stash_ids?: unknown[] }) => p.stash_ids || [],
     captions: () => [],
     rating100: async (p: { id: string }) => (await getSceneData(p.id)).rating100 ?? null,
     o_counter: async (p: { id: string }) => (await getSceneData(p.id)).o_counter ?? 0,
-    created_at: () => null,
-    updated_at: () => null,
+    created_at: (p: { created_at?: string | null }) => p.created_at || null,
+    updated_at: (p: { updated_at?: string | null }) => p.updated_at || null,
   },
 
   Performer: {
@@ -479,7 +479,11 @@ export const resolvers = {
     alias_list: (p: { alias_list?: string[] }) => p.alias_list || [],
     favorite: async (p: { id: string }) => (await getPerformerData(p.id)).favorite ?? false,
     ignore_auto_tag: () => false,
-    scene_count: () => 0,
+    scene_count: async (p: { id: string }) => {
+      const scenes = await getAllScenes();
+      return scenes.filter((s) => s.performers?.some((perf: { id: string }) => perf.id === p.id))
+        .length;
+    },
     image_count: () => 0,
     gallery_count: () => 0,
     group_count: () => 0,
@@ -494,19 +498,22 @@ export const resolvers = {
 
   Studio: {
     name: (p: { name?: string | null }) => p.name || '',
-    urls: () => [],
+    urls: (p: { urls?: string[] }) => p.urls || [],
     child_studios: () => [],
     image_count: () => 0,
     gallery_count: () => 0,
     performer_count: () => 0,
     group_count: () => 0,
-    tags: () => [],
+    tags: (p: { tags?: unknown[] }) => p.tags || [],
     ignore_auto_tag: () => false,
-    stash_ids: () => [],
+    stash_ids: (p: { stash_ids?: unknown[] }) => p.stash_ids || [],
     custom_fields: () => ({}),
     aliases: (p: { aliases?: string[] }) => p.aliases || [],
     favorite: () => false,
-    scene_count: () => 0,
+    scene_count: async (p: { id: string }) => {
+      const scenes = await getAllScenes();
+      return scenes.filter((s) => s.studio?.id === p.id).length;
+    },
     created_at: () => null,
     updated_at: () => null,
   },
@@ -516,7 +523,10 @@ export const resolvers = {
     favorite: () => false,
     aliases: (p: { aliases?: string[] }) => p.aliases || [],
     ignore_auto_tag: () => false,
-    scene_count: () => 0,
+    scene_count: async (p: { id: string }) => {
+      const scenes = await getAllScenes();
+      return scenes.filter((s) => s.tags?.some((tag: { id: string }) => tag.id === p.id)).length;
+    },
     performer_count: () => 0,
     scene_marker_count: () => 0,
     image_count: () => 0,

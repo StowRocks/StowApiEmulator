@@ -6,6 +6,7 @@ export interface TMDBVideo {
   name: string;
   type: string;
   site: string;
+  published_at?: string;
 }
 
 export interface TMDBCastMember {
@@ -67,6 +68,8 @@ export interface Scene {
   performers: Performer[];
   movies: Movie[];
   stash_ids?: StashID[];
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface Performer {

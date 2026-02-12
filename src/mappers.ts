@@ -20,11 +20,12 @@ export function mapVideoToScene(
   showId: number,
   showDetails?: TMDBShowDetails
 ): Scene {
+  const airDate = video.published_at || showDetails?.first_air_date || null;
   return {
     id: `scene-${showId}-${video.id}`,
     title: video.name,
     details: null,
-    date: null,
+    date: airDate,
     urls: [`https://www.youtube.com/watch?v=${video.key}`],
     paths: {
       screenshot: `https://img.youtube.com/vi/${video.key}/0.jpg`,
@@ -37,6 +38,8 @@ export function mapVideoToScene(
         stash_id: `${showId}-${video.id}`,
       },
     ],
+    created_at: airDate,
+    updated_at: airDate,
   };
 }
 
