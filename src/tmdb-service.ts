@@ -48,6 +48,13 @@ export async function fetchImages(personId: number): Promise<TMDBImage[]> {
   return data.profiles;
 }
 
+export async function fetchSeasonImages(showId: number, season: number): Promise<TMDBImage[]> {
+  const data = await cachedFetch<{ posters: TMDBImage[] }>(
+    `${TMDB_BASE}/tv/${showId}/season/${season}/images`
+  );
+  return data.posters || [];
+}
+
 export async function fetchAllShows(ids: number[]): Promise<TMDBShowDetails[]> {
   const { allowedTmdbIds } = getConfig();
   const filteredIds = ids.filter((id) => allowedTmdbIds.includes(id));

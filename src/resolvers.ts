@@ -1,5 +1,5 @@
 import { getConfig } from './config';
-import { fetchVideos, fetchCredits, fetchShowDetails } from './tmdb-service';
+import { fetchVideos, fetchCredits, fetchShowDetails, fetchSeasonImages } from './tmdb-service';
 import { mapVideoToScene, mapCastToPerformer, mapShowToStudio, mapGenreToTag } from './mappers';
 import {
   getSceneData,
@@ -333,9 +333,71 @@ export const resolvers = {
       return { count: tags.length, tags: paginated };
     },
 
-    findGalleries: () => ({ count: 0, galleries: [] }),
+    findGalleries: async (_: unknown, args: { ids?: string[] }) => {
+      const { allowedTmdbIds } = getConfig();
+      const galleries = await Promise.all(
+        allowedTmdbIds.map(async (showId) => {
+          try {
+            const images = await fetchSeasonImages(showId, 1);
+            if (!images.length) return null;
+            return {
+              id: `gallery-${showId}`,
+              title: `Season 1 Posters`,
+              date: null,
+              image_count: images.length,
+              cover: images[0]
+                ? {
+                    id: `image-${showId}-0`,
+                    title: null,
+                    paths: {
+                      thumbnail: `https://image.tmdb.org/t/p/w200${images[0].file_path}`,
+                      image: `https://image.tmdb.org/t/p/original${images[0].file_path}`,
+                    },
+                  }
+                : null,
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      const filtered = galleries.filter((g): g is NonNullable<typeof g> => g !== null);
+      if (args.ids?.length) {
+        const idSet = new Set(args.ids);
+        return { count: filtered.length, galleries: filtered.filter((g) => idSet.has(g.id)) };
+      }
+      return { count: filtered.length, galleries: filtered };
+    },
+
     findGroups: () => ({ count: 0, groups: [] }),
-    findImages: () => ({ count: 0, images: [] }),
+
+    findImages: async (_: unknown, args: { ids?: string[] }) => {
+      const { allowedTmdbIds } = getConfig();
+      const allImages = await Promise.all(
+        allowedTmdbIds.map(async (showId) => {
+          try {
+            const images = await fetchSeasonImages(showId, 1);
+            return images.map((img, idx) => ({
+              id: `image-${showId}-${idx}`,
+              title: `Season 1 Poster ${idx + 1}`,
+              paths: {
+                thumbnail: `https://image.tmdb.org/t/p/w200${img.file_path}`,
+                image: `https://image.tmdb.org/t/p/original${img.file_path}`,
+              },
+            }));
+          } catch {
+            return [];
+          }
+        })
+      );
+      const images = allImages.flat();
+      if (args.ids?.length) {
+        const idSet = new Set(args.ids);
+        return { count: images.length, images: images.filter((i) => idSet.has(i.id)) };
+      }
+      return { count: images.length, images };
+    },
+
     findSceneMarkers: () => ({ count: 0, scene_markers: [] }),
   },
 
