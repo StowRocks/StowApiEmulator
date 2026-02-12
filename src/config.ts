@@ -2,7 +2,7 @@ export interface AppConfig {
   tmdbApiKey: string;
   tmdbApiToken: string;
   allowedTmdbIds: number[];
-  enableInvidiousStreams: boolean;
+  enableYoutubeLinkConversion: boolean;
 }
 
 const REQUIRED_VARS = ['TMDB_API_KEY', 'TMDB_API_TOKEN', 'ALLOWED_TMDB_IDS'] as const;
@@ -26,6 +26,6 @@ export function getConfig(): AppConfig {
     tmdbApiKey: process.env.TMDB_API_KEY!,
     tmdbApiToken: process.env.TMDB_API_TOKEN!,
     allowedTmdbIds,
-    enableInvidiousStreams: process.env.ENABLE_INVIDIOUS_STREAMS === 'true',
+    enableYoutubeLinkConversion: process.env.ENABLE_YOUTUBE_LINK_CONVERSION === 'true',
   };
 }

@@ -1,15 +1,13 @@
 import ytdl from '@distube/ytdl-core';
 
-interface StreamFormat {
-  url: string;
-  quality: string;
-  hasAudio: boolean;
-  hasVideo: boolean;
-}
-
 const cache = new Map<string, { url: string; expiresAt: number }>();
 const CACHE_TTL = 5 * 60 * 60 * 1000; // 5 hours (URLs expire in 6)
 
+/**
+ * Extract direct stream URL from YouTube video using ytdl-core
+ * @param videoKey YouTube video ID
+ * @returns Direct .mp4 stream URL or null if extraction fails
+ */
 export async function getStreamUrl(videoKey: string): Promise<string | null> {
   // Check cache
   const cached = cache.get(videoKey);
