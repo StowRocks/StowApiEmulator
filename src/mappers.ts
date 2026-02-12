@@ -29,6 +29,8 @@ export function mapVideoToScene(
     urls: [`https://www.youtube.com/watch?v=${video.key}`],
     paths: {
       screenshot: `https://img.youtube.com/vi/${video.key}/0.jpg`,
+      preview: `https://img.youtube.com/vi/${video.key}/maxresdefault.jpg`,
+      stream: `https://www.youtube.com/watch?v=${video.key}`,
     },
     performers: [],
     movies: [],
@@ -70,6 +72,7 @@ export function mapImagesToGallery(personId: number, images: TMDBImage[]): Galle
 
 export function mapShowToGroup(show: TMDBShowDetails): Group {
   const network = show.networks?.[0];
+  const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/original';
   return {
     id: `group-${show.id}`,
     name: show.name || show.title || 'Unknown',
@@ -81,8 +84,8 @@ export function mapShowToGroup(show: TMDBShowDetails): Group {
     synopsis: show.overview || null,
     urls: show.homepage ? [show.homepage] : [],
     scene_count: show.number_of_episodes || 0,
-    front_image_path: null,
-    back_image_path: null,
+    front_image_path: show.poster_path ? `${TMDB_IMAGE_BASE}${show.poster_path}` : null,
+    back_image_path: show.backdrop_path ? `${TMDB_IMAGE_BASE}${show.backdrop_path}` : null,
     studio: network ? mapShowToStudio(show) : null,
     tags: show.genres?.map(mapGenreToTag) || [],
   };

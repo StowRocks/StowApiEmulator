@@ -45,6 +45,8 @@ export interface TMDBShowDetails {
   genres?: TMDBGenre[];
   number_of_episodes?: number;
   number_of_seasons?: number;
+  poster_path?: string;
+  backdrop_path?: string;
 }
 
 // Stash Schema Types (output, served via GraphQL)
@@ -56,6 +58,8 @@ export interface StashID {
 
 export interface ScenePaths {
   screenshot: string | null;
+  preview?: string | null;
+  stream?: string | null;
 }
 
 export interface Scene {
