@@ -29,7 +29,7 @@ export function mapVideoToScene(
     urls: [`https://www.youtube.com/watch?v=${video.key}`],
     paths: {
       screenshot: `https://img.youtube.com/vi/${video.key}/0.jpg`,
-      preview: `https://img.youtube.com/vi/${video.key}/maxresdefault.jpg`,
+      preview: null, // No preview video available in mock data
       stream: `https://www.youtube.com/watch?v=${video.key}`,
     },
     performers: [],
