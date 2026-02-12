@@ -543,15 +543,27 @@ export const resolvers = {
   },
 
   Gallery: {
-    image_count: () => 0,
+    image_count: (p: { image_count?: number }) => p.image_count || 0,
+    urls: () => [],
+    organized: () => false,
+    studio: () => null,
+    performers: () => [],
+    tags: () => [],
+    scenes: () => [],
+    created_at: () => null,
+    updated_at: () => null,
   },
 
   Group: {
     name: (p: { name?: string | null }) => p.name || '',
     aliases: (p: { aliases?: string[] }) => p.aliases || [],
     urls: (p: { urls?: string[] }) => p.urls || [],
-    tags: () => [],
-    scene_count: () => 0,
+    tags: (p: { tags?: unknown[] }) => p.tags || [],
+    studio: (p: { studio?: unknown }) => p.studio || null,
+    scene_count: (p: { scene_count?: number }) => p.scene_count || 0,
+    scenes: () => [],
+    created_at: () => null,
+    updated_at: () => null,
   },
 
   StashImage: {

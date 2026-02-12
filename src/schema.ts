@@ -347,9 +347,21 @@ export const typeDefs = `#graphql
   type Gallery {
     id: ID!
     title: String
+    code: String
+    urls: [String!]!
     date: String
+    details: String
+    photographer: String
+    rating100: Int
+    organized: Boolean!
     image_count: Int!
     cover: StashImage
+    studio: Studio
+    performers: [Performer!]!
+    tags: [Tag!]!
+    scenes: [Scene!]!
+    created_at: Time
+    updated_at: Time
   }
 
   type Group {
@@ -367,6 +379,9 @@ export const typeDefs = `#graphql
     back_image_path: String
     studio: Studio
     tags: [Tag!]!
+    scenes: [Scene!]!
+    created_at: Time
+    updated_at: Time
   }
 
   type Movie {
